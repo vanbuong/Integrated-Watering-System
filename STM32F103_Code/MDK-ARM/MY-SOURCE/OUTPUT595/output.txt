@@ -1,0 +1,22 @@
+#ifndef __OUTPUT_H_
+#define __OUTPUT_H_
+
+/* Includes ------------------------------------------------------------------*/
+#include "stm32f10x.h"
+#include "stm32_eval.h"
+
+#define SPI_PORT      		SPI2
+#define SPI_SCK_PIN   		GPIO_Pin_13    // PB13
+#define SPI_MISO_PIN  		GPIO_Pin_14    // PB14
+#define SPI_MOSI_PIN  		GPIO_Pin_15    // PB15
+#define SPI_LATCH_PIN    	GPIO_Pin_12    // PB12
+#define SPI_GPIO_PORT GPIOB
+
+
+void init_output(void);
+void OpenOutput(uint8_t index);
+void OpenAllOutput(void);
+void CloseOutput(uint8_t index);
+void CloseAllOutput(void);
+
+#endif
