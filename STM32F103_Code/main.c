@@ -55,13 +55,13 @@
 #define     SETUP_SAVE      0x18
 #define     SETUP_BACK      0x19
 
-#define			MONDAY					0x1A
-#define			TUESDAY					0x1B
-#define			WEDNESDAY				0x1C
-#define			THUSDAY					0x1D
-#define			FRIDAY					0x1F
-#define			SATURDAY				0x20
-#define			SUNDAY					0x21
+#define			MONDAY					0x02
+#define			TUESDAY					0x03
+#define			WEDNESDAY				0x04
+#define			THUSDAY					0x05
+#define			FRIDAY					0x06
+#define			SATURDAY				0x07
+#define			SUNDAY					0x01
 
 #define			TIMER1					0x22
 #define			TIMER2					0x23
@@ -96,6 +96,7 @@
 uint32_t CRC_EEPROM 		= 0x5F29A0B2;
 uint32_t CRCValue				= 0;
 uint32_t CRCTemp				= 0;
+uint8_t isWatering			= 0;
 uint8_t MainState 			= DISPLAY_TIME;
 uint8_t SetupTimeState 	= SETUP_DAY;
 uint8_t	TimerState			= TIMER1;
@@ -123,6 +124,8 @@ void LoadTimer(void);
 void PrintTimer(uint8_t row, uint8_t col, uint8_t num);
 void WriteCalendarEEPROM(void);
 void InitCalendarEEPROM(void);
+void Watering(void);
+void CheckWatering(uint8_t *day_watering);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -226,6 +229,7 @@ int main(void)
 					default:
 							break;
 			}
+			Watering();
 			WriteCalendarEEPROM();
 			LCD1602_Display();
   }
@@ -238,9 +242,12 @@ void InitSystem(void)
 	LCD_Init(LCD_1602);
 	LCD1602_Clear();
 	LCD1602_ClearBFR();
+	GPIOx_Init();
 	Keyboard_Init();
 	DS1307_Init();
 	EEPROM_Init();
+	LED1(0);
+	LED2(0);
 	
 	/* Enable CRC clock */
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_CRC, ENABLE);
@@ -655,6 +662,10 @@ void InitCalendarEEPROM(void)
 			Saturday[i] 	= 0;
 			Sunday[i] 		= 0;
 		}
+		Sunday[4] = 15;
+		Sunday[5] = 55;
+		Sunday[6] = 0;
+		Sunday[7] = 15;
 		EEPROM_WritePage(0x0000, Monday);
 		_delay_ms(3);
 		EEPROM_WritePage(0x0040, Tuesday);
@@ -1184,6 +1195,64 @@ void CreateCalendar(void)
 		default:
 			break;
 	}
+}
+void CheckWatering(uint8_t* day_watering)
+{
+	uint8_t count = 0;
+	int16_t total_minutes;
+	int16_t current_minutes;
+	for (count=0; count<64; count=count+4)
+	{
+		if (day_watering[count+2] !=0 || day_watering[count+3] !=0)
+		{
+			// Calculate a finished time
+			total_minutes = day_watering[count+2]*60 + day_watering[count+3];
+			current_minutes = (hour - day_watering[count])*60 + minute - day_watering[count+1];
+			
+			//Check this time for watering
+			if (current_minutes >= 0 && current_minutes < total_minutes)
+			{
+				isWatering = 1;
+				break;
+			}
+			else
+				isWatering = 0;
+				LED2(0);
+		}
+	}
+}
+void Watering(void)
+{
+	switch (day)
+	{
+		case MONDAY:
+			CheckWatering(Monday);
+			break;
+		case TUESDAY:
+			CheckWatering(Tuesday);
+			break;
+		case WEDNESDAY:
+			CheckWatering(Wednesday);
+			break;
+		case THUSDAY:
+			CheckWatering(Thusday);
+			break;
+		case FRIDAY:
+			CheckWatering(Friday);
+			break;
+		case SATURDAY:
+			CheckWatering(Saturday);
+			break;
+		case SUNDAY:
+			CheckWatering(Sunday);
+			break;
+		default:
+			break;
+	}
+	if (isWatering)
+		{	LED1(1);}
+	else
+		LED1(0);
 }
 /* Private functions ---------------------------------------------------------*/
 
